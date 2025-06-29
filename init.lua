@@ -92,87 +92,203 @@ require("lazy").setup({
 			},
 		},
 		{ "nvim-treesitter/playground", cmd = "TSPlaygroundToggle" },
-	},
-	-- Configure any other settings here. See the documentation for more details.
-	-- colorscheme that will be used when installing plugins.
-	install = { colorscheme = { "habamax" } },
-	-- automatically check for plugin updates
-	checker = { enabled = true },
-})
+		-- Debugging (DAP)
+			{
+				"mfussenegger/nvim-dap",
+				recommended = true,
+				desc = "Debugging support. Requires language specific adapters to be configured. (see lang extras)",
 
--- Preferences
-vim.opt.number = true
-vim.opt.relativenumber = true
-vim.opt.foldenable = false
-vim.opt.wrap = false
-vim.opt.cmdheight = 3
+				dependencies = {
+					"rcarriga/nvim-dap-ui",
+					-- virtual text for the debugger
+					{
+						"theHamsta/nvim-dap-virtual-text",
+						opts = {},
+					},
+				},
 
-vim.opt.shiftwidth = 4
-vim.opt.softtabstop = 4
-vim.opt.tabstop = 4
-vim.opt.expandtab = false
-vim.opt.smarttab = false
-vim.opt.wildignore = '.hg,.svn,*~,*.png,*.jpg,*.gif,*.min.js,*.swp,*.o,vendor,dist,_site'
+				-- stylua: ignore
+				keys = {
+					{ "<leader>dB", function() require("dap").set_breakpoint(vim.fn.input('Breakpoint condition: ')) end, desc = "Breakpoint Condition" },
+					{ "<leader>db", function() require("dap").toggle_breakpoint() end, desc = "Toggle Breakpoint" },
+					{ "<leader>dc", function() require("dap").continue() end, desc = "Run/Continue" },
+					{ "<leader>da", function() require("dap").continue({ before = get_args }) end, desc = "Run with Args" },
+					{ "<leader>dC", function() require("dap").run_to_cursor() end, desc = "Run to Cursor" },
+					{ "<leader>dg", function() require("dap").goto_() end, desc = "Go to Line (No Execute)" },
+					{ "<leader>di", function() require("dap").step_into() end, desc = "Step Into" },
+					{ "<leader>dj", function() require("dap").down() end, desc = "Down" },
+					{ "<leader>dk", function() require("dap").up() end, desc = "Up" },
+					{ "<leader>dl", function() require("dap").run_last() end, desc = "Run Last" },
+					{ "<leader>do", function() require("dap").step_out() end, desc = "Step Out" },
+					{ "<leader>dO", function() require("dap").step_over() end, desc = "Step Over" },
+					{ "<leader>dP", function() require("dap").pause() end, desc = "Pause" },
+					{ "<leader>dr", function() require("dap").repl.toggle() end, desc = "Toggle REPL" },
+					{ "<leader>ds", function() require("dap").session() end, desc = "Session" },
+					{ "<leader>dt", function() require("dap").terminate() end, desc = "Terminate" },
+					{ "<leader>dw", function() require("dap.ui.widgets").hover() end, desc = "Widgets" },
+				},
 
-vim.opt.scrolloff = 2
--- more useful diffs (nvim -d)
---- by ignoring whitespace
-vim.opt.diffopt:append('iwhite')
---- and using a smarter algorithm
---- https://vimways.org/2018/the-power-of-diff/
---- https://stackoverflow.com/questions/32365271/whats-the-difference-between-git-diff-patience-and-git-diff-histogram
---- https://luppeng.wordpress.com/2020/10/10/when-to-use-each-of-the-git-diff-algorithms/
-vim.opt.diffopt:append('algorithm:histogram')
-vim.opt.diffopt:append('indent-heuristic')
--- show a column at 80 characters as a guide for long lines
-vim.opt.colorcolumn = '80'
+				config = function()
+					-- load mason-nvim-dap here, after all adapters have been setup
+					if LazyVim.has("mason-nvim-dap.nvim") then
+						require("mason-nvim-dap").setup(LazyVim.opts("mason-nvim-dap.nvim"))
+					end
 
-vim.opt.listchars = 'tab:^ ,nbsp:¬,extends:»,precedes:«,trail:•' 
--- <leader><leader> toggles between buffers
-vim.keymap.set('n', '<leader><leader>', '<c-^>')
--- <leader>, shows/hides hidden characters
-vim.keymap.set('n', '<leader>,', ':set invlist<cr>')
+					vim.api.nvim_set_hl(0, "DapStoppedLine", { default = true, link = "Visual" })
 
--- case-insensitive search/replace
-vim.opt.ignorecase = true
--- unless uppercase in search term
-vim.opt.smartcase = true
+					for name, sign in pairs(LazyVim.config.icons.dap) do
+						sign = type(sign) == "table" and sign or { sign }
+						vim.fn.sign_define(
+							"Dap" .. name,
+							{ text = sign[1], texthl = sign[2] or "DiagnosticInfo", linehl = sign[3], numhl = sign[3] }
+						)
+					end
+				end
+				},
+				{ "rcarriga/nvim-dap-ui", dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"} },
+				{
+					"jay-babu/mason-nvim-dap.nvim",
+					dependencies = "mason.nvim",
+					cmd = { "DapInstall", "DapUninstall" },
+					opts = {
+						-- Makes a best effort to setup the various debuggers with
+						-- reasonable debug configurations
+						automatic_installation = true,
 
---" Decent wildmenu
--- in completion, when there is more than one match,
--- list all matches, and only complete to longest common match
-vim.opt.wildmode = 'list:longest'
+						-- You can provide additional configuration to the handlers,
+						-- see mason-nvim-dap README for more information
+						handlers = {},
 
--- keymaps
-vim.keymap.set('v', 'Y', '"+y')
-vim.keymap.set('n', 'P', '"+p')
+						-- You'll need to check that you have the required things installed
+						-- online, please don't ask me how to install them :)
+						ensure_installed = {
+							-- Update this to ensure that you have the debuggers for the langs you want
+						},
+					},
+					-- mason-nvim-dap is loaded when nvim-dap loads
+					config = function() end,
+				},
+				-- Telescope
+				{
+					"nvim-telescope/telescope.nvim",
+					cmd = "Telescope",
+					dependencies = {
+						"nvim-lua/plenary.nvim",
+						"nvim-telescope/telescope-fzf-native.nvim",
+					},
+					build = "make",
+					opts = {
+						defaults = {
+							file_ignore_patterns = { ".git/", "node_modules/" },
+						},
+					},
+				},
+				{
+					"nvim-telescope/telescope-fzf-native.nvim",
+					build = "make",
+					cond = function()
+						return vim.fn.executable("make") == 1
+					end,
+				},
 
--- quick-open
-vim.keymap.set('', '<C-p>', '<cmd>Files<cr>')
--- search buffers
-vim.keymap.set('n', '<leader>;', '<cmd>Buffers<cr>')
--- quick-save
-vim.keymap.set('n', '<leader>w', '<cmd>w<cr>')
+				-- Git & UI
+				{ "lewis6991/gitsigns.nvim", event = { "BufReadPre", "BufNewFile" }, opts = {} },
+				{ "nvim-lualine/lualine.nvim", event = "VeryLazy", opts = {} },
+				{
+					"lukas-reineke/indent-blankline.nvim",
+					main = "ibl",
+					event = { "BufReadPre", "BufNewFile" },
+					opts = {},
+				},
+				{ "numToStr/Comment.nvim", opts = {} },
+				{ "folke/which-key.nvim", event = "VeryLazy", opts = {} },
 
--- https://github.com/neovim/neovim/issues/5916
--- So we also map Ctrl+k
--- Ctrl+h to stop searching
-vim.keymap.set('v', '<C-h>', '<cmd>nohlsearch<cr>')
-vim.keymap.set('n', '<C-h>', '<cmd>nohlsearch<cr>')
--- Jump to start and end of line using the home row keys
-vim.keymap.set('', 'H', '^')
-vim.keymap.set('', 'L', '$')
-vim.keymap.set('', 'R', ':%s/')
+				{"nvim-neotest/nvim-nio"},
 
--- let the left and right arrows be useful: they can switch buffers
-vim.keymap.set('n', '<left>', ':bp<cr>')
-vim.keymap.set('n', '<right>', ':bn<cr>')
 
--- handy keymap for replacing up to next _ (like in variable names)
-vim.keymap.set('n', '<leader>m', 'ct_')
--- F1 is pretty close to Esc, so you probably meant Esc
-vim.keymap.set('', '<F1>', '<Esc>')
-vim.keymap.set('i', '<F1>', '<Esc>')
-vim.api.nvim_set_keymap('n', '<C-f>', ':sus<CR>', { noremap = true, silent = true })
+			},
 
-vim.cmd 'colorscheme habamax'
+			-- Configure any other settings here. See the documentation for more details.
+			-- colorscheme that will be used when installing plugins.
+			install = { colorscheme = { "habamax" } },
+			-- automatically check for plugin updates
+			checker = { enabled = true },
+		})
+
+		-- Preferences
+		vim.opt.number = true
+		vim.opt.relativenumber = true
+		vim.opt.foldenable = false
+		vim.opt.wrap = false
+		vim.opt.cmdheight = 2
+
+		vim.opt.shiftwidth = 4
+		vim.opt.softtabstop = 4
+		vim.opt.tabstop = 4
+		vim.opt.expandtab = false
+		vim.opt.smarttab = true
+		vim.opt.wildignore = '.hg,.svn,*~,*.png,*.jpg,*.gif,*.min.js,*.swp,*.o,vendor,dist,_site'
+
+		vim.opt.scrolloff = 2
+		-- more useful diffs (nvim -d)
+		--- by ignoring whitespace
+		vim.opt.diffopt:append('iwhite')
+		--- and using a smarter algorithm
+		--- https://vimways.org/2018/the-power-of-diff/
+		--- https://stackoverflow.com/questions/32365271/whats-the-difference-between-git-diff-patience-and-git-diff-histogram
+		--- https://luppeng.wordpress.com/2020/10/10/when-to-use-each-of-the-git-diff-algorithms/
+		vim.opt.diffopt:append('algorithm:histogram')
+		vim.opt.diffopt:append('indent-heuristic')
+		-- show a column at 80 characters as a guide for long lines
+		vim.opt.colorcolumn = '80'
+
+		vim.opt.listchars = 'tab:^ ,nbsp:¬,extends:»,precedes:«,trail:•' 
+		-- <leader><leader> toggles between buffers
+		vim.keymap.set('n', '<leader><leader>', '<c-^>')
+		-- <leader>, shows/hides hidden characters
+		vim.keymap.set('n', '<leader>,', ':set invlist<cr>')
+
+		-- case-insensitive search/replace
+		vim.opt.ignorecase = true
+		-- unless uppercase in search term
+		vim.opt.smartcase = true
+
+		--" Decent wildmenu
+		-- in completion, when there is more than one match,
+		-- list all matches, and only complete to longest common match
+		vim.opt.wildmode = 'list:longest'
+
+		-- keymaps
+		vim.keymap.set('v', 'Y', '"+y')
+		vim.keymap.set('n', 'P', '"+p')
+
+		-- quick-open
+		vim.keymap.set('', '<C-p>', '<cmd>Files<cr>')
+		-- search buffers
+		vim.keymap.set('n', '<leader>;', '<cmd>Buffers<cr>')
+		-- quick-save
+		vim.keymap.set('n', '<leader>w', '<cmd>w<cr>')
+
+		-- https://github.com/neovim/neovim/issues/5916
+		-- So we also map Ctrl+k
+		-- Ctrl+h to stop searching
+		vim.keymap.set('v', '<C-h>', '<cmd>nohlsearch<cr>')
+		vim.keymap.set('n', '<C-h>', '<cmd>nohlsearch<cr>')
+		-- Jump to start and end of line using the home row keys
+		vim.keymap.set('', 'H', '^')
+		vim.keymap.set('', 'L', '$')
+		vim.keymap.set('', 'R', ':%s/')
+
+		-- let the left and right arrows be useful: they can switch buffers
+		vim.keymap.set('n', '<left>', ':bp<cr>')
+		vim.keymap.set('n', '<right>', ':bn<cr>')
+
+		-- handy keymap for replacing up to next _ (like in variable names)
+		vim.keymap.set('n', '<leader>m', 'ct_')
+		-- F1 is pretty close to Esc, so you probably meant Esc
+		vim.keymap.set('', '<F1>', '<Esc>')
+		vim.keymap.set('i', '<F1>', '<Esc>')
+		vim.api.nvim_set_keymap('n', '<C-f>', ':sus<CR>', { noremap = true, silent = true })
+
+		-- Show diagnostics under cursor
+		vim.cmd 'colorscheme habamax'
