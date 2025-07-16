@@ -48,9 +48,23 @@ require("lazy").setup({
                     -- yaml
                     "yamlls",
                     -- bash
-                    "bashls"},
+                    "bashls",
+                    "ts_ls"
+                },
                     automatic_installation = true,
                 },
+                keys = {
+                    {
+                        '<leader>en',
+                        function() vim.diagnostic.goto_next() end,
+                        desc = 'Next LSP Error'
+                    },
+                    {
+                        '<leader>ep',
+                        function() vim.diagnostic.goto_prev() end,
+                        desc = 'Previous LSP Error'
+                    }
+                }
             },
             {
                 "j-hui/fidget.nvim",
@@ -93,6 +107,7 @@ require("lazy").setup({
                             },
                         },
                     })
+                    lspconfig.ts_ls.setup({})
                 end,
             },
             {
@@ -129,15 +144,15 @@ require("lazy").setup({
                     },
                 },
 
-            {
-                "nvim-treesitter/nvim-treesitter-context",
-                dependencies = { "nvim-treesitter/nvim-treesitter" },
-                opts = {
-                    -- optional config here
-                    max_lines = 1, -- how many lines of context to show
-                    enable = true,
+                {
+                    "nvim-treesitter/nvim-treesitter-context",
+                    dependencies = { "nvim-treesitter/nvim-treesitter" },
+                    opts = {
+                        -- optional config here
+                        max_lines = 1, -- how many lines of context to show
+                        enable = true,
+                    },
                 },
-            },
                 -- Debugging (DAP)
                 { "rcarriga/nvim-dap-ui", dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"} },
                 {
@@ -224,6 +239,13 @@ require("lazy").setup({
                             file_ignore_patterns = { ".git/", "node_modules/" },
                         },
                     },
+                    keys = {
+                        {
+                            '<leader>fb',
+                            function() require("telescope.builtin").buffers({}) end,
+                            desc = "Find buffers",
+                        }
+                    }
                 },
                 {
                     "nvim-telescope/telescope-fzf-native.nvim",
@@ -334,17 +356,10 @@ require("lazy").setup({
         vim.keymap.set('i', '<F1>', '<Esc>')
         vim.api.nvim_set_keymap('n', '<C-f>', ':sus<CR>', { noremap = true, silent = true })
 
+        vim.keymap.set("n", "gd", vim.lsp.buf.definition)
+        vim.keymap.set("n", "K", vim.lsp.buf.hover)
+        vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename)
 
-        --- Only use on azerty !!!!!!! -----
-        -- Remap ^ to [ minding dead key
-        vim.keymap.set({ "n", "i", "x", "o" }, "<char-94>", "[")   -- ^ to [
-        vim.keymap.set({ "n", "i", "x", "o" }, "$", "]", { remap = true })
-
-        vim.keymap.set({ "n", "i", "x", "o" }, "*", "}", { remap = true })
-
-        -- Remap z to w for movement, but still type "z" in insert mode
-        vim.keymap.set({ "n", "x", "o" }, "z", "w", { remap = true })
-        -- Show diagnostics under cursor
         vim.cmd 'colorscheme habamax'
 
         -- Autocommands
