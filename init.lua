@@ -236,15 +236,100 @@ require("lazy").setup({
                     build = "make",
                     opts = {
                         defaults = {
-                            file_ignore_patterns = { ".git/", "node_modules/" },
+                            file_ignore_patterns = {
+                                ".git/",
+                                "node_modules/",
+                                "%.lock",
+                                "__pycache__/",
+                                "%.sqlite3",
+                                "%.ipynb",
+                                "vendor/",
+                            },
+                            vimgrep_arguments = {
+                                "rg",
+                                "--color=never",
+                                "--no-heading",
+                                "--with-filename",
+                                "--line-number",
+                                "--column",
+                                "--smart-case",
+                                "--hidden",
+                                "--glob=!.git/",
+                            },
+                            mappings = {
+                                i = {
+                                    ["<C-u>"] = false,
+                                    ["<C-d>"] = false,
+                                },
+                            },
+                        },
+                        pickers = {
+                            find_files = {
+                                hidden = true,
+                            },
+                            live_grep = {
+                                additional_args = function()
+                                    return { "--hidden" }
+                                end,
+                            },
                         },
                     },
+                    config = function(_, opts)
+                        require("telescope").setup(opts)
+                        require("telescope").load_extension("fzf")
+                    end,
                     keys = {
                         {
                             '<leader>fb',
                             function() require("telescope.builtin").buffers({}) end,
                             desc = "Find buffers",
-                        }
+                        },
+                        {
+                            '<leader>ff',
+                            function() require("telescope.builtin").find_files({}) end,
+                            desc = "Find files",
+                        },
+                        {
+                            '<leader>fg',
+                            function() require("telescope.builtin").live_grep({}) end,
+                            desc = "Live grep (ripgrep)",
+                        },
+                        {
+                            '<leader>fw',
+                            function() require("telescope.builtin").grep_string({}) end,
+                            desc = "Grep word under cursor",
+                        },
+                        {
+                            '<leader>fi',
+                            function()
+                                require("telescope.builtin").live_grep({
+                                    prompt_title = "Search Imports",
+                                    default_text = "import ",
+                                })
+                            end,
+                            desc = "Search imports",
+                        },
+                        {
+                            '<leader>fc',
+                            function()
+                                require("telescope.builtin").live_grep({
+                                    prompt_title = "Search Classes/Functions",
+                                    default_text = "(class |def |function |const |let |var )",
+                                    type_filter = "regex",
+                                })
+                            end,
+                            desc = "Search classes/functions",
+                        },
+                        {
+                            '<leader>fh',
+                            function() require("telescope.builtin").help_tags({}) end,
+                            desc = "Find help",
+                        },
+                        {
+                            '<leader>fr',
+                            function() require("telescope.builtin").resume({}) end,
+                            desc = "Resume last search",
+                        },
                     }
                 },
                 {
